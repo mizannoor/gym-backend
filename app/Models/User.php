@@ -8,8 +8,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
-{
+use Tymon\JWTAuth\Contracts\JWTSubject;
+
+class User extends Authenticatable implements JWTSubject {
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
@@ -20,7 +21,9 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'password',
+        'status_id',
+        'created_by',
+        'updated_by'
     ];
 
     /**
@@ -41,4 +44,32 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    // JWT
+    public function getJWTIdentifier() {
+        return $this->getKey();
+    }
+    public function getJWTCustomClaims() {
+        return [];
+    }
+
+    // Relations
+    public function status() {
+        return $this->belongsTo(Status::class);
+    }
+    public function roles() {
+        return $this->belongsToMany(Role::class);
+    }
+    public function memberships() {
+        return $this->hasMany(Membership::class);
+    }
+    public function payments() {
+        return $this->hasMany(Payment::class);
+    }
+    public function createdBy() {
+        return $this->belongsTo(self::class, 'created_by');
+    }
+    public function updatedBy() {
+        return $this->belongsTo(self::class, 'updated_by');
+    }
 }
