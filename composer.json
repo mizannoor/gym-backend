@@ -11,7 +11,7 @@
         "guzzlehttp/guzzle": "^7.0.1",
         "laravel/framework": "^8.75",
         "laravel/sanctum": "^2.11",
-        "laravel/socialite": "*",
+        "laravel/socialite": "^5.20",
         "laravel/tinker": "^2.5",
         "square/square": "^40.0",
         "tymon/jwt-auth": "^1.0"

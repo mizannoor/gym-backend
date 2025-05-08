@@ -72,4 +72,5 @@ class User extends Authenticatable implements JWTSubject {
     public function updatedBy() {
         return $this->belongsTo(self::class, 'updated_by');
     }
+    
 }

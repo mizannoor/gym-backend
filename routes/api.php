@@ -28,3 +28,9 @@ Route::group(['middleware' => 'auth:api'], function () {
     Route::post('payment/webhook',   'API\PaymentController@webhook');
     // later: search routes
 });
+
+Route::prefix('auth')->group(function () {
+    Route::get('google/redirect',  'API\AuthController@redirectToGoogle');
+    Route::get('google/callback',  'API\AuthController@handleGoogleCallback');
+    Route::post('logout',          'API\AuthController@logout')->middleware('auth:api');
+});

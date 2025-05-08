@@ -30,9 +30,15 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    //? --------------------------
     'square' => [
         'access_token' => env('SQUARE_ACCESS_TOKEN'),
         'environment'  => env('SQUARE_ENVIRONMENT', 'sandbox'),
+    ],
+    'google' => [
+        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect'      => env('GOOGLE_REDIRECT_URI'),
     ],
 
 ];
