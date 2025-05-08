@@ -30,4 +30,9 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'square' => [
+        'access_token' => env('SQUARE_ACCESS_TOKEN'),
+        'environment'  => env('SQUARE_ENVIRONMENT', 'sandbox'),
+    ],
+
 ];
