@@ -13,6 +13,12 @@ class MembershipPlan extends Model {
         'created_by',
         'updated_by'
     ];
+
+    protected $casts = [
+        'price'           => 'float',  // ← ensures JSON number, not string
+        'duration_months' => 'integer'
+    ];
+    
     public function memberships() {
         return $this->hasMany(Membership::class, 'plan_id');
     }

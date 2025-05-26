@@ -14,7 +14,19 @@ class PlanController extends Controller {
      * @return \Illuminate\Http\Response
      */
     public function index() {
-        return response()->json(MembershipPlan::all(), 200);
+        // return response()->json(MembershipPlan::all(), 200);
+
+        // You could paginate here if you have many plans
+        $plans = MembershipPlan::select([
+            'id',
+            'name',
+            'price',
+            'duration_months',
+        ])->get();
+
+        return response()->json([
+            'plans' => $plans,
+        ], 200);
     }
 
     /**

@@ -12,6 +12,8 @@ use Square\SquareClient;
 use Square\Models\CreatePaymentRequest;
 use Square\Models\Money;
 use Square\Exceptions\ApiException;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\JsonResponse;
 
 class PaymentController extends Controller {
     /** @var SquareClient */
@@ -24,17 +26,84 @@ class PaymentController extends Controller {
         ]);
     }
 
+    public function index(): JsonResponse {
+        $raw = Auth::user()
+            ->payments()
+            ->with('status')    // eager-load the status
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // map to only the fields your client needs,
+        // extracting the status name
+        $payments = $raw->map(function ($p) {
+            return [
+                'id'         => $p->id,
+                'amount'     => $p->amount,
+                'status'     => $p->status->name,
+                'created_at' => $p->created_at,
+            ];
+        });
+
+        return response()->json($payments->values(), 200);
+    }
+
     /**
      * Create a Square payment and record it locally
      */
-    public function createPayment(Request $request) {
+    public function createPayment(Request $request): JsonResponse {
         $request->validate([
             'membership_id' => 'required|exists:memberships,id',
             'amount'        => 'required|numeric|min:0.01',
             'nonce'         => 'required|string',
         ]);
 
-        $membership = Membership::findOrFail($request->membership_id);
+        // 1) Initialize Square client
+        $client = new SquareClient([
+            'accessToken' => config('services.square.access_token'),
+            'environment' => config('services.square.environment'),
+        ]);
+        $paymentsApi = $client->getPaymentsApi();
+
+        // 2) Build the Money object
+        $money = new Money();
+        $money->setAmount(intval($request->amount * 100)); // cents
+        $money->setCurrency($request->currency);
+
+        // 3) Build and send CreatePaymentRequest
+        $idempotencyKey = uniqid();
+        $createReq = new CreatePaymentRequest(
+            $request->nonce,
+            $idempotencyKey,
+            $money
+        );
+
+        $response = $paymentsApi->createPayment($createReq);
+        if ($response->isSuccess()) {
+            $squarePayment = $response->getResult()->getPayment();
+
+            // 4) Record in local DB as 'pending'
+            $pendingStatusId = Status::where('name', 'pending')->value('id');
+            $payment = Payment::create([
+                'user_id'           => Auth::id(),
+                'amount'            => $request->amount,
+                'status_id'         => $pendingStatusId,
+                'square_payment_id' => $squarePayment->getId(),
+                'created_by'        => Auth::id(),
+                'updated_by'        => Auth::id(),
+            ]);
+
+            return response()->json([
+                'payment_id' => $payment->id,
+                'square_id'  => $squarePayment->getId(),
+                'status'     => 'pending',
+                'details'    => $squarePayment,
+            ], 201);
+        } else {
+            $errors = $response->getErrors();
+            return response()->json(['errors' => $errors], 422);
+        }
+
+        /* $membership = Membership::findOrFail($request->membership_id);
 
         // Build the Money object
         $money = new Money();
@@ -77,13 +146,13 @@ class PaymentController extends Controller {
             return response()->json([
                 'error' => $e->getMessage()
             ], 500);
-        }
+        } */
     }
 
     /**
      * Square webhook to update payment status
      */
-    public function webhook(Request $request) {
+    /* public function webhook(Request $request) {
         $data    = $request->input('data.object.payment', []);
         $payment = Payment::where('provider_payment_id', $data['id'] ?? '')->first();
 
@@ -114,5 +183,36 @@ class PaymentController extends Controller {
         }
 
         return response()->json([], 200);
+    } */
+
+    /**
+     * Handle Square webhooks for payment updates.
+     */
+    public function webhookHandler(Request $request): JsonResponse {
+        $event = $request->all();
+        $paymentData = data_get($event, 'data.object.payment');
+        if (! $paymentData) {
+            return response()->json(['message' => 'No payment data'], 400);
+        }
+
+        $squareId = $paymentData['id'];
+        $squareStatus = $paymentData['status']; // e.g. COMPLETED, PENDING, FAILED
+        $map = [
+            'COMPLETED' => 'success',
+            'PENDING'   => 'pending',
+        ];
+        $statusName = $map[$squareStatus] ?? 'failed';
+        $statusId   = Status::where('name', $statusName)->value('id');
+
+        // Update our record
+        $payment = Payment::where('square_payment_id', $squareId)->first();
+        if ($payment) {
+            $payment->update([
+                'status_id'  => $statusId,
+                'updated_by' => $payment->user_id,
+            ]);
+        }
+
+        return response()->json(['message' => 'Webhook processed'], 200);
     }
 }

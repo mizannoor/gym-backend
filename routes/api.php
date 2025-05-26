@@ -2,7 +2,11 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\DashboardController;
+use App\Http\Controllers\API\PlanController;
+use App\Http\Controllers\API\SubscriptionController;
+use App\Http\Controllers\API\PaymentController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -14,23 +18,43 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+Route::prefix('auth')->group(function () {
+    Route::get('google/redirect', [AuthController::class, 'redirectToGoogle']);
+    Route::get('google/callback', [AuthController::class, 'handleGoogleCallback']);
+    Route::post('google/token',   [AuthController::class, 'googleToken']);
+    // later: search routes
+});
+
+Route::get('/user', function (Request $request) {
     return $request->user();
 });
 
 // routes/api.php
-Route::group(['middleware' => 'auth:api'], function () {
-    Route::get('dashboard',          'API\DashboardController@index');
-    Route::get('plans',              'API\PlanController@index');
-    Route::get('plans/{id}',         'API\PlanController@show');
-    Route::post('subscribe',         'API\SubscriptionController@subscribe');
-    Route::post('payment/create',    'API\PaymentController@createPayment');
-    Route::post('payment/webhook',   'API\PaymentController@webhook');
+// All other API routes require a valid JWT
+Route::middleware('auth:api')->group(function () {
+    // Dashboard
+    Route::get('dashboard', [DashboardController::class, 'index']);
+
+    // Membership plans
+    Route::get('plans',       [PlanController::class, 'index']);
+    Route::get('plans/{id}',  [PlanController::class, 'show']);
+
+    // Subscribe to a plan
+    Route::post('subscribe',  [SubscriptionController::class, 'subscribe']);
+
+    // Payments
+    Route::get('payments', [PaymentController::class, 'index']);
+    Route::post('payment/create',  [PaymentController::class, 'createPayment']);
+    Route::post('payment/webhook', [PaymentController::class, 'webhookHandler']);
+
     // later: search routes
+    // (Add your search routes here when ready)
 });
 
 Route::prefix('auth')->group(function () {
-    Route::get('google/redirect',  'API\AuthController@redirectToGoogle');
-    Route::get('google/callback',  'API\AuthController@handleGoogleCallback');
-    Route::post('logout',          'API\AuthController@logout')->middleware('auth:api');
+    Route::get('google/redirect',  [AuthController::class, 'redirectToGoogle']);
+    Route::get('google/callback',  [AuthController::class, 'handleGoogleCallback']);
+    Route::post('google/token',    [AuthController::class, 'googleToken']);     // ← corrected
+    Route::post('logout',          [AuthController::class, 'logout'])
+        ->middleware('auth:api');
 });
