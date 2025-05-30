@@ -18,6 +18,8 @@ use App\Http\Controllers\API\PaymentController;
 |
 */
 
+Route::middleware('auth:api')->get('/payment/status/{id}', [PaymentController::class, 'checkStatus']);
+
 Route::prefix('auth')->group(function () {
     Route::get('google/redirect', [AuthController::class, 'redirectToGoogle']);
     Route::get('google/callback', [AuthController::class, 'handleGoogleCallback']);
@@ -46,7 +48,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('payments', [PaymentController::class, 'index']);
     Route::post('payment/create',  [PaymentController::class, 'createPayment']);
     Route::post('payment/webhook', [PaymentController::class, 'webhookHandler']);
-
+    Route::post('payment/checkout-link', [PaymentController::class, 'createCheckoutLink']);
     // later: search routes
     // (Add your search routes here when ready)
 });
