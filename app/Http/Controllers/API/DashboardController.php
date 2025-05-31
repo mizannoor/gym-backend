@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 // PNG backend instead of SVG
 use BaconQrCode\Renderer\Image\ImagickImageBackEnd;
 use Endroid\QrCode\Builder\Builder;
+use App\Models\Membership;
 
 class DashboardController extends Controller {
     /**
@@ -23,40 +24,19 @@ class DashboardController extends Controller {
             'status' => json_encode($request),
         ], 200);
     }
-    /* public function index() {
-        $user   = Auth::user();
-        $status = $user->status->name;
-        $payload = "user:{$user->id};status:{$status}";
-
-        // Configure a 200×200 SVG QR code
-        $user   = Auth::user();
-        $status = $user->status->name;
-        $payload = json_encode([
-            'user_id' => $user->id,
-            'status'  => $status,
-        ]);
-
-        // Render a 200×200 PNG
-        $renderer = new ImageRenderer(
-            new RendererStyle(200),
-            new ImagickImageBackEnd()          // ← swap this in
-        );
-        $writer   = new Writer($renderer);
-        $pngData  = $writer->writeString($payload);
-        $qrBase64 = base64_encode($pngData);
-
-        return response()->json([
-            'status' => $status,
-            'qr'     => $qrBase64,
-        ]);
-    } */
 
     public function index() {
         $user   = Auth::user();
         $status = $user->status->name;
+        $membership = Membership::with('status')
+               ->where('user_id', $user->id)
+               ->where('status_id', 1)
+               ->first();
+
         $payload = json_encode([
             'user_id' => $user->id,
             'status'  => $status,
+            'membership'  => isset($membership) ? $membership : null,
         ]);
 
         // Build a 200×200 PNG via GD
@@ -72,6 +52,7 @@ class DashboardController extends Controller {
         return response()->json([
             'status' => $status,
             'qr'     => $qrBase64,
+            'membership'  => isset($membership) ? $membership : null,
         ], 200);
     }
 }

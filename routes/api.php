@@ -18,7 +18,7 @@ use App\Http\Controllers\API\PaymentController;
 |
 */
 
-Route::middleware('auth:api')->get('/payment/status/{id}', [PaymentController::class, 'checkStatus']);
+Route::middleware('auth:api')->get('/payment/{id}/status', [PaymentController::class, 'checkStatus']);
 
 Route::prefix('auth')->group(function () {
     Route::get('google/redirect', [AuthController::class, 'redirectToGoogle']);
@@ -43,6 +43,10 @@ Route::middleware('auth:api')->group(function () {
 
     // Subscribe to a plan
     Route::post('subscribe',  [SubscriptionController::class, 'subscribe']);
+    Route::post('subscription/cancel', [SubscriptionController::class, 'cancel']);
+
+    // Membership
+    Route::get('membership/current', [SubscriptionController::class, 'currentMembership']);
 
     // Payments
     Route::get('payments', [PaymentController::class, 'index']);
