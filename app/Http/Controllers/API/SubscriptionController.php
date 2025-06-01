@@ -114,21 +114,20 @@ class SubscriptionController extends Controller {
             ], 404);
         }
 
-        // // 3) Look up the "inactive" status ID
-        // $inactiveStatus = Status::where('name', 'inactive')->first();
-        // if (!$inactiveStatus) {
-        //     return response()->json([
-        //         'message' => 'Inactive status not configured in database.'
-        //     ], 500);
-        // }
+        // 3) Look up the "inactive" status ID
+        $inactiveStatus = Status::where('name', 'inactive')->first();
+        if (!$inactiveStatus) {
+            return response()->json([
+                'message' => 'Inactive status not configured in database.'
+            ], 500);
+        }
 
-        // // 4) Update the membership record
-        // $membership->status_id = $inactiveStatus->id;
-        // // Optionally, if you want to set expires_at to today:
-        // // $membership->expires_at = now()->toDateString();
-        // $membership->save();
-        $membership->delete();
-        
+        // 4) Update the membership record
+        $membership->status_id = $inactiveStatus->id;
+        // Optionally, if you want to set expires_at to today:
+        // $membership->expires_at = now()->toDateString();
+        $membership->save();
+
         // 5) Return success JSON (you can include the updated membership if you like)
         return response()->json([
             'message'    => 'Membership cancelled successfully.',

@@ -28,10 +28,11 @@ class DashboardController extends Controller {
     public function index() {
         $user   = Auth::user();
         $status = $user->status->name;
-        $membership = Membership::with('status')
-               ->where('user_id', $user->id)
-               ->where('status_id', 1)
-               ->first();
+        $membership = Membership::select("id", "user_id", "plan_id", "status_id", "starts_at", "expires_at")
+            ->with(['status:id,name,description'])
+            ->where('user_id', $user->id)
+            ->where('status_id', 1)
+            ->first();
 
         $payload = json_encode([
             'user_id' => $user->id,
@@ -40,19 +41,23 @@ class DashboardController extends Controller {
         ]);
 
         // Build a 200×200 PNG via GD
-        $result = Builder::create()
-            ->data($payload)
-            ->size(200)
-            ->margin(0)
-            ->build();
+        $result = Builder::create()->data($payload)->size(200)->margin(0)->build();
 
         $pngData  = $result->getString();           // raw PNG bytes
-        $qrBase64 = base64_encode($pngData);
+        // Only encode the QR if the membership’s status ID is 1 (“active”).
+        $qrBase64 = '';
+        $statusId = optional(optional($membership)->status)->id;
 
+        if ($statusId === 1) {
+            $pngData  = $result->getString();    // raw PNG bytes
+            $qrBase64 = base64_encode($pngData);
+        }
+
+        // Return the JSON payload. If $membership is null, it will simply be null.
         return response()->json([
-            'status' => $status,
-            'qr'     => $qrBase64,
-            'membership'  => isset($membership) ? $membership : null,
+            'status'     => $status,
+            'qr'         => $qrBase64,
+            'membership' => $membership,
         ], 200);
     }
 }
