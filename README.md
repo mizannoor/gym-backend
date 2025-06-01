@@ -1,5 +1,7 @@
 
 ```markdown
+# UTeM : MMSD 5223 - Native Mobile Development II
+
 # 🏋️‍♂️ Gym Membership Backend API (Laravel 10)
 
 This is the Laravel backend API for the **Gym Membership App**, designed to work with a SwiftUI iOS frontend. The system supports Google Sign-In, membership subscriptions, QR code validation, payment via Square, and email notifications.
