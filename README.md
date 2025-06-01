@@ -1,6 +1,3 @@
-You're right — the previous version showed raw Markdown in preview because of the nested code blocks. Here's the corrected **`README.md`** with proper formatting that will display cleanly in GitHub preview:
-
----
 
 ```markdown
 # 🏋️‍♂️ Gym Membership Backend API (Laravel 10)
