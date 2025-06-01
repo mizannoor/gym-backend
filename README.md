@@ -1,8 +1,7 @@
-You're right — the previous version showed raw Markdown in preview because of the nested code blocks. Here's the corrected **`README.md`** with proper formatting that will display cleanly in GitHub preview:
-
----
+# UTeM : MMSD 5223 - Native Mobile Development II
 
 ```markdown
+
 # 🏋️‍♂️ Gym Membership Backend API (Laravel 10)
 
 This is the Laravel backend API for the **Gym Membership App**, designed to work with a SwiftUI iOS frontend. The system supports Google Sign-In, membership subscriptions, QR code validation, payment via Square, and email notifications.
