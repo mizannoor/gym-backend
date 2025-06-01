@@ -22,7 +22,7 @@ class Membership extends Model {
         return $this->belongsTo(MembershipPlan::class, 'plan_id');
     }
     public function status() {
-        return $this->belongsTo(Status::class);
+        return $this->belongsTo(Status::class, 'status_id');
     }
     public function payments() {
         return $this->hasMany(Payment::class);

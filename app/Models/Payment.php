@@ -16,6 +16,11 @@ class Payment extends Model {
         'created_by',
         'updated_by'
     ];
+
+    protected $casts = [
+        'amount'     => 'float',
+        'created_at' => 'datetime',
+    ];
     public function user() {
         return $this->belongsTo(User::class);
     }

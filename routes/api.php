@@ -2,35 +2,44 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\API\UserController;
+use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\DashboardController;
+use App\Http\Controllers\API\PlanController;
+use App\Http\Controllers\API\SubscriptionController;
+use App\Http\Controllers\API\PaymentController;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
-*/
+// Public/auth routes
+Route::get('/auth/google/redirect', [AuthController::class, 'redirectToGoogle']);
+Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
+Route::post('/auth/google/token', [AuthController::class, 'googleToken']);
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+// All routes below require a valid JWT
+Route::middleware('auth:api')->group(function () {
+    // 1) GET /api/user → returns { id, name, email }
+    Route::get('/user', [UserController::class, 'show']);
+    // 2) DELETE /api/user → deletes user + related data
+    Route::delete('/user', [UserController::class, 'destroy']);
 
-// routes/api.php
-Route::group(['middleware' => 'auth:api'], function () {
-    Route::get('dashboard',          'API\DashboardController@index');
-    Route::get('plans',              'API\PlanController@index');
-    Route::get('plans/{id}',         'API\PlanController@show');
-    Route::post('subscribe',         'API\SubscriptionController@subscribe');
-    Route::post('payment/create',    'API\PaymentController@createPayment');
-    Route::post('payment/webhook',   'API\PaymentController@webhook');
-    // later: search routes
-});
+    // Existing authenticated endpoints:
+    Route::get('/dashboard', [DashboardController::class, 'index']);
 
-Route::prefix('auth')->group(function () {
-    Route::get('google/redirect',  'API\AuthController@redirectToGoogle');
-    Route::get('google/callback',  'API\AuthController@handleGoogleCallback');
-    Route::post('logout',          'API\AuthController@logout')->middleware('auth:api');
+    // Plans
+    Route::get('/plans', [PlanController::class, 'index']);
+    Route::get('/plans/{id}', [PlanController::class, 'show']);
+
+    // Subscriptions
+    Route::post('/subscribe', [SubscriptionController::class, 'subscribe']);
+    Route::post('/subscription/cancel', [SubscriptionController::class, 'cancel']);
+    Route::get('/membership/current', [SubscriptionController::class, 'currentMembership']);
+
+    // Payments
+    Route::get('/payments', [PaymentController::class, 'index']);
+    Route::post('/payment/create', [PaymentController::class, 'createPayment']);
+    Route::post('/payment/webhook', [PaymentController::class, 'webhookHandler']);
+    Route::post('/payment/checkout-link', [PaymentController::class, 'createCheckoutLink']);
+    Route::get('/payment/{id}/status', [PaymentController::class, 'checkStatus']);
+
+    // Logout
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
 });

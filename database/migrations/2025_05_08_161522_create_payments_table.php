@@ -15,7 +15,7 @@ class CreatePaymentsTable extends Migration {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('membership_id');
-            $table->string('provider_payment_id');
+            $table->string('provider_payment_id')->nullable();
             $table->decimal('amount', 8, 2);
             $table->unsignedBigInteger('status_id');
             $table->timestamp('paid_at')->nullable();

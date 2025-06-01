@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 use Tymon\JWTAuth\Contracts\JWTSubject;
+use App\Models\Payment;
 
 class User extends Authenticatable implements JWTSubject {
     use HasApiTokens, HasFactory, Notifiable;
@@ -21,6 +22,7 @@ class User extends Authenticatable implements JWTSubject {
     protected $fillable = [
         'name',
         'email',
+        'password',
         'status_id',
         'created_by',
         'updated_by'
@@ -60,9 +62,16 @@ class User extends Authenticatable implements JWTSubject {
     public function roles() {
         return $this->belongsToMany(Role::class);
     }
+    public function membership() {
+        return $this->hasOne(Membership::class)
+            ->where('status_id', Status::where('name', 'active')->value('id'));
+    }
     public function memberships() {
         return $this->hasMany(Membership::class);
     }
+    /**
+     * A user can have many payments.
+     */
     public function payments() {
         return $this->hasMany(Payment::class);
     }
@@ -72,5 +81,4 @@ class User extends Authenticatable implements JWTSubject {
     public function updatedBy() {
         return $this->belongsTo(self::class, 'updated_by');
     }
-    
 }

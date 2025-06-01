@@ -10,8 +10,16 @@ use App\Models\Status;
 use Illuminate\Http\Request;
 use Square\SquareClient;
 use Square\Models\CreatePaymentRequest;
+use Illuminate\Support\Str;
 use Square\Models\Money;
 use Square\Exceptions\ApiException;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\JsonResponse;
+use Square\Models\CreateCheckoutRequest;
+use Square\Models\CreateOrderRequest;
+use Square\Models\Order;
+use Square\Models\OrderLineItem;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller {
     /** @var SquareClient */
@@ -24,95 +32,234 @@ class PaymentController extends Controller {
         ]);
     }
 
+    public function index(): JsonResponse {
+        $raw = Auth::user()
+            ->payments()
+            ->with('status')    // eager-load the status
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // map to only the fields your client needs,
+        // extracting the status name
+        $payments = $raw->map(function ($p) {
+            return [
+                'id'         => $p->id,
+                'amount'     => $p->amount,
+                'status'     => $p->status->name,
+                'created_at' => $p->created_at,
+            ];
+        });
+
+        return response()->json($payments->values(), 200);
+    }
+
     /**
      * Create a Square payment and record it locally
      */
-    public function createPayment(Request $request) {
+    public function createPayment(Request $request): JsonResponse {
         $request->validate([
-            'membership_id' => 'required|exists:memberships,id',
-            'amount'        => 'required|numeric|min:0.01',
             'nonce'         => 'required|string',
+            'amount'        => 'required|numeric|min:0.01',
+            'currency'      => 'required|string|size:3',
+            // 'membership_id' => 'required|exists:memberships,id',  <-- remove or make nullable
         ]);
 
-        $membership = Membership::findOrFail($request->membership_id);
+        // Initialize Square client
+        $client = new SquareClient([
+            'accessToken' => config('services.square.access_token'),
+            'environment' => config('services.square.environment'),
+        ]);
+        $paymentsApi = $client->getPaymentsApi();
 
         // Build the Money object
         $money = new Money();
-        $money->setAmount(intval($request->amount * 100));  // in cents
-        $money->setCurrency('USD');
+        $money->setAmount(intval($request->amount * 100)); // in cents
+        $money->setCurrency($request->currency);
 
-        // Build the CreatePaymentRequest
-        $body = new CreatePaymentRequest(
-            $request->nonce,
-            uniqid('', true),
-            $money
+        // Create the request with just sourceId + idempotencyKey
+        $idempotencyKey = uniqid();
+        $createReq = new CreatePaymentRequest(
+            $request->nonce,       // sourceId (string)
+            $idempotencyKey        // idempotencyKey (string)
         );
 
-        try {
-            $paymentsApi  = $this->square->getPaymentsApi();
-            $apiResponse  = $paymentsApi->createPayment($body);
+        // Attach the money via setter
+        $createReq->setAmountMoney($money);
 
-            if ($apiResponse->isSuccess()) {
-                $result  = $apiResponse->getResult()->getPayment();
+        // Send it off
+        $response = $paymentsApi->createPayment($createReq);
 
-                $payment = Payment::create([
-                    'user_id'             => $membership->user_id,
-                    'membership_id'       => $membership->id,
-                    'provider_payment_id' => $result->getId(),
-                    'amount'              => $request->amount,
-                    'status_id'           => Status::where('name', 'success')->first()->id,
-                    'paid_at'             => now(),
-                    'created_by'          => $membership->user_id,
-                    'updated_by'          => $membership->user_id,
-                ]);
+        if ($response->isSuccess()) {
+            $squarePayment = $response->getResult()->getPayment();
 
-                return response()->json($payment, 201);
+            // Record in local DB as 'pending'
+            $pendingStatusId = Status::where('name', 'pending')->value('id');
+            $membership = Auth::user()->membership; // or ->memberships()->active()->first()
+
+            if (! $membership) {
+                return response()->json(['error' => 'No active membership'], 422);
             }
 
-            // API-level errors
+            $payment = Payment::create([
+                'user_id'              => Auth::id(),
+                'membership_id'        => $membership->id,
+                'amount'               => $request->amount,
+                'status_id'            => $pendingStatusId,
+                'provider_payment_id'  => $squarePayment->getId(),  // ← add this
+                'created_by'           => Auth::id(),
+                'updated_by'           => Auth::id(),
+            ]);
+
             return response()->json([
-                'errors' => $apiResponse->getErrors()
-            ], 500);
-        } catch (ApiException $e) {
-            return response()->json([
-                'error' => $e->getMessage()
-            ], 500);
+                'payment_id' => $payment->id,
+                'square_id'  => $squarePayment->getId(),
+                'status'     => 'pending',
+                'details'    => $squarePayment,
+            ], 201);
+        } else {
+            $errors = $response->getErrors();
+            return response()->json(['errors' => $errors], 422);
         }
     }
 
     /**
-     * Square webhook to update payment status
+     * Handle Square webhooks for payment updates.
      */
-    public function webhook(Request $request) {
-        $data    = $request->input('data.object.payment', []);
-        $payment = Payment::where('provider_payment_id', $data['id'] ?? '')->first();
-
-        if (! $payment) {
-            return response()->json([], 404);
+    public function webhookHandler(Request $request): JsonResponse {
+        $event = $request->all();
+        $paymentData = data_get($event, 'data.object.payment');
+        if (! $paymentData) {
+            return response()->json(['message' => 'No payment data'], 400);
         }
 
-        // Map Square status to our status names
-        $rawStatus = $data['status'] ?? '';
-        switch ($rawStatus) {
-            case 'COMPLETED':
-                $statusName = 'success';
-                break;
-            case 'PENDING':
-                $statusName = 'pending';
-                break;
-            default:
-                $statusName = 'failed';
-                break;
-        }
+        $squareId = $paymentData['id'];
+        $squareStatus = $paymentData['status']; // e.g. COMPLETED, PENDING, FAILED
+        $map = [
+            'COMPLETED' => 'success',
+            'PENDING'   => 'pending',
+        ];
+        $statusName = $map[$squareStatus] ?? 'failed';
+        $statusId   = Status::where('name', $statusName)->value('id');
 
-        $status = Status::where('name', $statusName)->first();
-        if ($status) {
+        // Update our record
+        $payment = Payment::where('square_payment_id', $squareId)->first();
+        if ($payment) {
             $payment->update([
-                'status_id'  => $status->id,
+                'status_id'  => $statusId,
                 'updated_by' => $payment->user_id,
             ]);
         }
 
-        return response()->json([], 200);
+        return response()->json(['message' => 'Webhook processed'], 200);
+    }
+
+    public function handleReturn(Request $request) {
+        $paymentId = $request->query('payment_id');
+        $status = $request->query('status', 'success');
+
+        // Optionally update payment record
+        if ($paymentId) {
+            $payment = Payment::find($paymentId);
+            if ($payment) {
+                $payment->update([
+                    'status_id' => Status::where('name', 'success')->value('id'),
+                    'paid_at' => now(),
+                    'updated_by' => $payment->user_id,
+                ]);
+            }
+        }
+
+        // ✅ Redirect to app using deep link
+        $callbackURL = "gymmembership://callback?payment_id={$paymentId}&status={$status}";
+        return redirect()->to($callbackURL);
+    }
+
+    public function checkStatus($id) {
+        $payment = Payment::findOrFail($id);
+
+        return response()->json([
+            'status' => $payment->status->name, // assuming relation exists
+        ]);
+    }
+
+
+    public function createCheckoutLink(Request $request) {
+        $request->validate([
+            'membership_id' => 'required|exists:memberships,id',
+        ]);
+
+        $user = Auth::user();
+        $membership = Membership::with('plan')->findOrFail($request->membership_id);
+        $amount = $membership->plan->price;
+        $amountCents = (int) round($amount * 100);
+
+        // Initialize Square client
+        $client = new SquareClient([
+            'accessToken' => config('services.square.access_token'),
+            'environment' => config('services.square.environment'),
+        ]);
+
+        // Create line item for the order
+        $money = new Money();
+        $money->setAmount($amountCents);
+        $money->setCurrency('USD');
+
+        $lineItem = new OrderLineItem('1');
+        $lineItem->setName($membership->plan->name);
+        $lineItem->setBasePriceMoney($money);
+
+        $order = new Order(config('services.square.location_id'));
+        $order->setLineItems([$lineItem]);
+
+        $orderRequest = new CreateOrderRequest();
+        $orderRequest->setIdempotencyKey((string) Str::uuid());
+        $orderRequest->setOrder($order);
+
+        $checkoutRequest = new CreateCheckoutRequest(
+            (string) Str::uuid(),
+            $orderRequest
+        );
+
+        // Save payment first to get its ID
+        $statusId = Status::where('name', 'pending')->value('id');
+        $payment = Payment::create([
+            'user_id'             => $user->id,
+            'membership_id'       => $membership->id,
+            'amount'              => $amount,
+            'provider_payment_id' => null,
+            'status_id'           => $statusId,
+            'created_by'          => $user->id,
+            'updated_by'          => $user->id,
+        ]);
+
+        // Set redirect URL with payment_id
+        $redirectUrl = config('services.square.redirect_url') . '?payment_id=' . $payment->id . '&status=pending';
+        $checkoutRequest->setRedirectUrl($redirectUrl);
+
+        $checkoutApi = $client->getCheckoutApi();
+        $response = $checkoutApi->createCheckout(
+            config('services.square.location_id'),
+            $checkoutRequest
+        );
+
+        if (! $response->isSuccess()) {
+            return response()->json([
+                'errors' => $response->getErrors()
+            ], 422);
+        }
+
+        $checkout = $response->getResult()->getCheckout();
+        $squareCheckoutId = $checkout->getId();
+        $checkoutUrl = $checkout->getCheckoutPageUrl();
+
+        // Update payment with Square checkout ID
+        $payment->update([
+            'provider_payment_id' => $squareCheckoutId,
+        ]);
+
+        return response()->json([
+            'payment_id'   => $payment->id,
+            'checkout_url' => $checkoutUrl
+        ]);
     }
 }

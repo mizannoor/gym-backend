@@ -34,6 +34,8 @@ return [
     'square' => [
         'access_token' => env('SQUARE_ACCESS_TOKEN'),
         'environment'  => env('SQUARE_ENVIRONMENT', 'sandbox'),
+        'location_id'   => env('SQUARE_LOCATION_ID'),    // ← add this line
+        'redirect_url' => env('SQUARE_REDIRECT_URL'),
     ],
     'google' => [
         'client_id'     => env('GOOGLE_CLIENT_ID'),
