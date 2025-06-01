@@ -1,66 +1,199 @@
+You're right — the previous version showed raw Markdown in preview because of the nested code blocks. Here's the corrected **`README.md`** with proper formatting that will display cleanly in GitHub preview:
 
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/
-5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+---
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+```markdown
+# 🏋️‍♂️ Gym Membership Backend API (Laravel 10)
 
-## About Laravel
+This is the Laravel backend API for the **Gym Membership App**, designed to work with a SwiftUI iOS frontend. The system supports Google Sign-In, membership subscriptions, QR code validation, payment via Square, and email notifications.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## ✅ Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- 🔐 Google OAuth login (Socialite) + JWT authentication  
+- 📅 Membership plans with subscription durations  
+- 📦 QR code generation for membership validation  
+- 💳 Square payment integration  
+- 📧 Email notifications on successful payments  
+- 🔍 Search feature for users and plans  
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 📁 Project Structure
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```
+```bash
+gym-backend/
+├── app/
+│   ├── Http/
+│   │   └── Controllers/
+│   │       ├── AuthController.php
+│   │       ├── DashboardController.php
+│   │       ├── PaymentController.php
+│   │       ├── PlanController.php
+│   │       └── SubscriptionController.php
+│   └── Models/
+│       ├── User.php
+│       ├── Role.php
+│       ├── Status.php
+│       ├── Membership.php
+│       ├── MembershipPlan.php
+│       └── Payment.php
+├── routes/
+│   ├── api.php
+│   └── web.php
+├── database/
+│   └── migrations/
+├── .env
+├── composer.json
+├── README.md
+└── gym\_app.sql
+```
 
-## Laravel Sponsors
+````
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+---
 
-### Premium Partners
+## ⚙️ Setup Instructions
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
+1. **Clone the repository**
 
-## Contributing
+```bash
+git clone https://github.com/mizannoor/gym-backend.git
+cd gym-backend
+````
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+2. **Install dependencies**
 
-## Code of Conduct
+```bash
+composer install
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+3. **Environment setup**
 
-## Security Vulnerabilities
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+> ⚠️ Edit your `.env` file with MySQL and OAuth credentials. Example:
 
-## License
+```env
+DB_DATABASE=gym_app
+DB_USERNAME=root
+DB_PASSWORD=your_password
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_secret
+
+SQUARE_APPLICATION_ID=your_app_id
+SQUARE_ACCESS_TOKEN=your_access_token
+```
+
+4. **Run migrations and seeders**
+
+```bash
+php artisan migrate --seed
+```
+
+5. **Start local development server**
+
+```bash
+php artisan serve
+```
+
+---
+
+## 🔑 Authentication Flow
+
+* Redirect to: `/api/auth/google/redirect`
+* Callback: `/api/auth/google/callback`
+* JWT Token will be issued and used like:
+
+```http
+Authorization: Bearer YOUR_TOKEN
+```
+
+---
+
+## 🔌 API Endpoints (Main)
+
+| Method | Endpoint                    | Purpose                          |
+| ------ | --------------------------- | -------------------------------- |
+| GET    | `/api/auth/google/redirect` | Begin Google OAuth login         |
+| GET    | `/api/memberships`          | Get user membership info         |
+| GET    | `/api/membership-plans`     | List available plans             |
+| POST   | `/api/subscribe`            | Subscribe to a selected plan     |
+| POST   | `/api/payments`             | Initiate Square payment          |
+| GET    | `/api/search`               | Search users or membership plans |
+
+---
+
+## 🧪 Testing
+
+You can use Postman or your SwiftUI frontend to test:
+
+* ✅ Gmail login
+* ✅ Plan subscription
+* ✅ Payment confirmation
+* ✅ QR code validation
+* ✅ Email delivery on renewal
+
+---
+
+## 🗃️ Entity-Relationship Diagram (ERD)
+
+A simplified version is below (full in `ERD.txt`):
+
+```mermaid
+erDiagram
+    USERS ||--o{ MEMBERSHIPS : has
+    MEMBERSHIPS ||--o{ PAYMENTS : covers
+    MEMBERSHIP_PLANS ||--o{ MEMBERSHIPS : defines
+    USERS ||--o{ PAYMENTS : makes
+    ROLES ||--o{ ROLE_USER : assigned
+    STATUSES ||--o{ USERS : defines
+```
+
+---
+
+## ✉️ Email Setup
+
+Local testing uses Mailhog:
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=mailhog
+MAIL_PORT=1025
+```
+
+---
+
+## 📦 Technologies Used
+
+* Laravel 10
+* Laravel Socialite (Google Login)
+* JWT Authentication (`tymon/jwt-auth`)
+* Square API SDK
+* QR Code Generator (`bacon/bacon-qr-code`)
+* MySQL 8 / MariaDB
+* Mailhog or Mailtrap for email testing
+
+---
+
+## 📱 Frontend
+
+Frontend is built using **SwiftUI** and connects via REST API. See [iOS App Repository](https://github.com/mizannoor/gym-ios) *(if available)*.
+
+---
+
+## 🪪 License
+
+This project is open-source and available under the [MIT license](LICENSE).
+
+```
+
+---
+
+```
