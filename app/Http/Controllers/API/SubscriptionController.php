@@ -37,8 +37,8 @@ class SubscriptionController extends Controller {
         $startsAt  = now();
         $expiresAt = now()->addMonths($plan->duration_months);
 
-        // Get the "active" status id
-        $statusId = Status::where('name', 'active')->value('id');
+        // Get the "pending" status id
+        $statusId = Status::where('name', 'pending')->value('id');
 
         // Create or update the user’s membership
         $membership = Membership::updateOrCreate(
@@ -46,8 +46,8 @@ class SubscriptionController extends Controller {
             [
                 'plan_id' => $plan->id,
                 'status_id'          => $statusId,
-                'starts_at'          => $startsAt,
-                'expires_at'         => $expiresAt,
+                // 'starts_at'          => $startsAt,
+                // 'expires_at'         => $expiresAt,
                 'created_by'         => $user->id,
                 'updated_by'         => $user->id,
             ]

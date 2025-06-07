@@ -4,9 +4,11 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\Membership;
 use App\Models\Payment;
 use App\Models\Status;
+use App\Models\MembershipPlan;
 use Illuminate\Http\Request;
 use Square\SquareClient;
 use Square\Models\CreatePaymentRequest;
@@ -160,12 +162,37 @@ class PaymentController extends Controller {
         // Optionally update payment record
         if ($paymentId) {
             $payment = Payment::find($paymentId);
+            $user = Auth::user() ? Auth::user() : User::find($payment->user_id);
+            
             if ($payment) {
+
                 $payment->update([
                     'status_id' => Status::where('name', 'success')->value('id'),
                     'paid_at' => now(),
                     'updated_by' => $payment->user_id,
                 ]);
+
+                // Get the "pending" status id
+                $statusId = Status::where('name', 'pending')->value('id');
+                // Find user’s membership
+                $membership = Membership::where('user_id', $user->id)->where('status_id', $statusId)->first();
+
+                // Fetch the plan
+                $plan = MembershipPlan::findOrFail($membership->plan_id);
+
+                // Compute start and expiration
+                $startsAt  = now();
+                $expiresAt = now()->addMonths($plan->duration_months);
+
+                // Get the "active" status id
+                $statusId = Status::where('name', 'active')->value('id');
+
+                // Update the user’s membership
+                $membership->starts_at  = $startsAt;
+                $membership->expires_at = $expiresAt;
+                $membership->status_id  = $statusId;
+                $membership->updated_by = $user->id;
+                $membership->save();
             }
         }
 
