@@ -46,8 +46,8 @@ class SubscriptionController extends Controller {
             [
                 'plan_id' => $plan->id,
                 'status_id'          => $statusId,
-                // 'starts_at'          => $startsAt,
-                // 'expires_at'         => $expiresAt,
+                'starts_at'          => $startsAt,
+                'expires_at'         => $expiresAt,
                 'created_by'         => $user->id,
                 'updated_by'         => $user->id,
             ]
