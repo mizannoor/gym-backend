@@ -14,7 +14,6 @@ This is the Laravel backend API for the **Gym Membership App**, designed to work
 - 📅 Membership plans with subscription durations  
 - 📦 QR code generation for membership validation  
 - 💳 Square payment integration  
-- 📧 Email notifications on successful payments  
 - 🔍 Search feature for users and plans  
 
 ---
