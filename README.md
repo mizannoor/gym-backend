@@ -21,32 +21,53 @@ This is the Laravel backend API for the **Gym Membership App**, designed to work
 ## 📁 Project Structure
 
 ```
-```bash
-gym-backend/
-├── app/
-│   ├── Http/
-│   │   └── Controllers/
-│   │       ├── AuthController.php
-│   │       ├── DashboardController.php
-│   │       ├── PaymentController.php
-│   │       ├── PlanController.php
-│   │       └── SubscriptionController.php
-│   └── Models/
-│       ├── User.php
-│       ├── Role.php
-│       ├── Status.php
-│       ├── Membership.php
-│       ├── MembershipPlan.php
-│       └── Payment.php
-├── routes/
+.gym-backend
+├── app
+│   ├── Console/
+│   ├── Exceptions/
+│   ├── Http
+│   │   ├── Controllers
+│   │   │   ├── API
+│   │   │   │   ├── AuthController.php
+│   │   │   │   ├── DashboardController.php
+│   │   │   │   ├── PaymentController.php
+│   │   │   │   ├── PlanController.php
+│   │   │   │   ├── SubscriptionController.php
+│   │   │   │   └── UserController.php
+│   │   │   └── Controller.php
+│   │   └── Middleware/
+│   ├── Models
+│   │   ├── Membership.php
+│   │   ├── MembershipPlan.php
+│   │   ├── Payment.php
+│   │   ├── Role.php
+│   │   ├── Status.php
+│   │   └── User.php
+│   └── Providers/
+├── bootstrap/
+│   └── cache/
+├── config/
+├── database
+│   ├── factories/
+│   ├── migrations
+│   └── seeders/
+├── docs/
+│   ├── Development Steps.md
+│   └── ERD.md
+├── public/
+├── resources
+│   ├── css/
+│   ├── js/
+│   ├── lang/
+│   └── views/
+├── routes
 │   ├── api.php
+│   ├── channels.php
+│   ├── console.php
 │   └── web.php
-├── database/
-│   └── migrations/
-├── .env
-├── composer.json
-├── README.md
-└── gym\_app.sql
+├── storage/
+└── tests/
+
 ```
 
 ---
